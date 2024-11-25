@@ -4,6 +4,8 @@ from PIL import Image
 import io
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.validators import MinLengthValidator, MaxLengthValidator
+from django.utils import timezone
+from datetime import timedelta
 
 
 class NewPost(models.Model):
@@ -26,7 +28,7 @@ class NewPost(models.Model):
         ],
         blank=False
     )
-    expires = models.DateField()
+    expires = models.DateField(default=timezone.now() + timedelta(days=365))
     status = models.CharField(
         max_length=10,
         choices=[
@@ -57,19 +59,22 @@ class NewPost(models.Model):
         # Redimensionar a imagem antes de salvar
         if self.image:
             img = Image.open(self.image)
+
             if img.height > self.max_image['height'] or img.width > self.max_image['width']:
                 output_size = (
-                    self.max_image['height'], self.max_image['width'])
+                    self.max_image['height'],
+                    self.max_image['width']
+                )
                 img.thumbnail(output_size)
 
                 # Salvar a imagem redimensionada em memória
                 img_io = io.BytesIO()
-                img.save(img_io, format='JPEG')
+                img.save(img_io, format='PNG')
                 img_io.seek(0)
 
                 # Substituir a imagem original pela redimensionada
                 self.image = InMemoryUploadedFile(
-                    img_io, 'ImageField', self.image.name, 'image/jpeg', img_io.getbuffer().nbytes, None
+                    img_io, 'ImageField', self.image.name, 'image/png', img_io.getbuffer().nbytes, None
                 )
 
         self.full_clean()
